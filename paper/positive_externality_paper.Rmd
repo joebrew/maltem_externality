@@ -1,0 +1,637 @@
+--- 
+title: "Positive externalities of a malaria elimination campaign"
+params:
+  something: 1
+  something_else: 2
+fig_height: 2.6
+fig_width: 4
+bibliography: bibliography.bib
+csl: elsevier-harvard.csl
+output:
+  html_document:
+    pandoc_args: [
+      "+RTS", "-K16000m",
+      "-RTS"
+    ]
+    toc: true
+    toc_float: true
+    theme: yeti
+---
+
+```{r}
+# bookdown::render_book("index.Rmd", "bookdown::pdf_book")
+# bookdown::clean_book(TRUE)
+
+knitr::opts_chunk$set(comment = NA, 
+               echo = FALSE, 
+               warning = FALSE, 
+               message = FALSE, 
+               error = TRUE, 
+               cache = FALSE,
+               out.width='80%', fig.asp=.75, fig.align='center')
+
+# devtools::install_github("cboettig/knitcitations@v1")
+# library(knitcitations); cleanbib()
+# cite_options(citation_format = "pandoc", check.entries=FALSE)
+# 
+# rmarkdown::draft("MyJSSArticle.Rmd", template = "jss_article", package = "rticles") 
+library(extrafont)
+# extrafont::font_import()
+# loadfonts()
+# For PostScript output, use loadfonts(device="postscript")
+# Suppress output with loadfonts(quiet=TRUE)
+
+
+```
+
+
+```{r}
+if('cached.RData' %in% dir()){
+  load('cached.RData')
+} else {
+  # Get in all BES, weather, etc. data
+  source('../master.R', chdir = TRUE)
+  
+  # Classify by contiguousness, etc.
+  df$location <- 
+    ifelse(df$district %in% c('MOAMBA',
+                              'MANHICA',
+                              'MASSINGIR',
+                              'CHOKWE',
+                              'BILENE'),
+           'Contiguous',
+           ifelse(df$district == 'MAGUDE', 'Intervention', 'Control'))
+  
+  # Define period
+  df$period <-
+    ifelse(df$date >= '2015-10-01', 'Post',
+           ifelse(df$date >= '2013-01-01', 'Pre',
+                  'Historic'))
+  
+  pre_avg <- df %>%
+    dplyr::filter(disease == 'MALARIA',
+           location == 'Contiguous',
+           date >='2013-01-01',
+           date <= '2015-10-10') %>%
+    summarise(x = sum(cases) / sum(population) * 1000) %>%
+    .$x %>% round(digits = 2)
+  Sys.sleep(0.1)
+  
+  post_avg <- df %>%
+    filter(disease == 'MALARIA',
+           location == 'Contiguous',
+           date > '2015-10-10') %>%
+    summarise(x = sum(cases) / sum(population) * 1000) %>%
+    .$x %>% round(digits = 2)
+  
+  pre_avg_season <- df %>%
+    filter(disease == 'MALARIA',
+           location == 'Contiguous',
+           date >='2013-01-01',
+           date <= '2015-10-10',
+           month %in% c(1:4)) %>%
+    summarise(x = sum(cases) / sum(population) * 1000) %>%
+    .$x %>% round(digits = 2)
+  
+  post_avg_season <- df %>%
+    filter(disease == 'MALARIA',
+           location == 'Contiguous',
+           date > '2015-10-10',
+           month %in% c(1:4)) %>%
+    summarise(x = sum(cases) / sum(population) * 1000) %>%
+    .$x %>% round(digits = 2)
+  
+  pre_avg_control <- df %>%
+    filter(disease == 'MALARIA',
+           location == 'Control',
+           date >='2013-01-01',
+           date <= '2015-10-10') %>%
+    summarise(x = sum(cases) / sum(population) * 1000) %>%
+    .$x %>% round(digits = 2)
+  
+  post_avg_control <- df %>%
+    filter(disease == 'MALARIA',
+           location == 'Control',
+           date > '2015-10-10') %>%
+    summarise(x = sum(cases) / sum(population) * 1000) %>%
+    .$x %>% round(digits = 2)
+  
+  pre_avg_season_control <- df %>%
+    filter(disease == 'MALARIA',
+           location == 'Control',
+           date >='2013-01-01',
+           date <= '2015-10-10',
+           month %in% c(1:4)) %>%
+    summarise(x = sum(cases) / sum(population) * 1000) %>%
+    .$x %>% round(digits = 2)
+  
+  post_avg_season_control <- df %>%
+    filter(disease == 'MALARIA',
+           location == 'Control',
+           date > '2015-10-10',
+           month %in% c(1:4)) %>%
+    summarise(x = sum(cases) / sum(population) * 1000) %>%
+    .$x %>% round(digits = 2)
+
+  save.image('cached.RData')
+}
+
+# Get a good theme for publication
+source('../get_theme.R', chdir = TRUE)
+
+library(tidyverse)
+library(knitr)
+library(grid)
+library(gridExtra)
+# library(extrafont)
+# extrafont::font_import() # Run only once  
+# loadfonts()
+
+# Get rmarkdown formats
+# rmarkdown::draft("sim.Rmd", template = "sim_article", package = "rticles")
+```
+
+
+
+
+
+
+# Introduction {#intro}
+
+The purpose of cost-effectiveness analyses is to "systematically compare the costs and consequences of health interventions" [@Hanson2004]. In doing so, one must take a transparent and rigorous approach to defining exactly what constitutes both costs and consequences. Those carrying out these evaluations often encounter relative ease in the estimation of costs, but great difficulty in the estimation of consequences Whereas costs can be of only a few varities (fixed vs. variable, start-up vs. maintenance) and are generally rigorously tracked in accounting and budgetary systems, understanding consequences requires a great deal more work in defining their scope, time frame and key indicators. 
+
+In the case of public health interventions targetting malaria, consequences (or "effectiveness") take on a myraid of metrics, ranging from DALYS averted [@Goodman1999], to cost-benefit ratios [@Shretta2016], to incremental cost-effectiveness ratios [@Lee2017] (to name just a few). But whatever the indicator, most malaria intervention evaluations share three common weaknesses: they are too limited in time (only assessing immediate, short-term effects); they are too limited in domain (only assessing the consequences in health); and they are too limited in space (not assessing the potential of consequences beyond the zone where the intervention occurred). The limitation of time is relatively insurmountable, since the most robust way to estimate long-term effects accurately is to observe them (ie, wait). Likewise, the limitation of domain is somewhat natural, since certain areas (disease, income, etc.) are more quantifiable than others. 
+
+This paper focuses on addressing the third limitation: how to better incorporate the consequences of a health intervention _outside_ of the geographic area where the intervention occurred. Fortunately, unlike the previous two limitations, this one is surmountable when routine epidemiologlical surveillance data is used for the evaluation of geography-specific interventions (often the case). By expanding the concept of evaluation beyond the intervention zone's borders, we can potentially yield insight into the secondary effects of interventions. Doing so means a better accounting of externalities, and a more accurate approach to cost-effectiveness analysis.
+
+Externalities are most often understood, in the context of public health campaigns, to be negative. Concerns are often voiced regarding drug and insecticide resistance, environmental degradation, and even moral hazard (need lots of references here). In many cases, economists have attempted to quantify and incorporate the costs of these externalities in CEAs. However, rarely is the potential for positive short-term externalities assessed or even acknowledged. When cross-border movement and leakage are referenced, it is usually in the context of threats to public health and masking of intervention effectiveness [@Hanson2004]; however, in the case of malaria intervention, leakage and cross-border effects also have the potential to be positive.
+
+In this paper, we examine the case of a malaria elimination campaign which employed mass drug administration (MDA) as the primary tool in a multi-pronged attempt to eliminate the transmission of malaria in the district of Magude, Mozambique, from late October 2015 through early 2017. The pilot elimination campaign, carried out by the Mozambican Alliance Towards the Elimination of Malaria (MALTEM), consisted of the administration of four rounds of Dihydroartemisinin-Piperaquine, as well as a round of indoor residual spraying (IRS).  Further details about the campaign, including the preliminary finding of a significant short-term reduction in the incidence of malaria in Magude district, have been published elsewhere [@brew].
+
+
+We hypothesize that cross border movement and epidemiological leakage may have lead to a reduction in malaria _beyond_ the malaria elimination area. We test this hypothesis through an analysis of clinical malaria incidence data in the intervention area (Maugde), the 5 "contiguous" districts (those which share a border with Magude), relative to 14 other districts - also from the south of Mozambique, but not in direct contact with Magude - both before and after the initiation of the malaria elimination campaign. We find that the intervention was associated with a significant reduction in the short-term incidence of malaria in those districts contiguous to Magude - despite not being part of the malaria elimination campaign - in both the first and second season following the initiation of the malaria elimination campaign [@brew]. 
+
+
+
+# Methods {#methods}
+
+
+We observed the 20 districts of the Gaza and Maputo provinces during the approximately 7 year period from January 2010 through the beginning of March 2017. We defined as "contiguous" those 6 districts which shared a border with Magude; the remaining 13 districts were classified as "control" (see Figure 1). We aggregated weekly clinical malaria cases at the district level using data from the Mozambican Boletim Epideniologico Semanal surveillance system, and calculated incidence and person-time at risk as a function of the district-specific population according to those estimates produced by the Mozambican National Statistical Institute. 
+
+
+
+```{r}
+library(cism)
+library(rgeos)
+library(maptools)
+# Map of area
+map <- moz1
+map <- map[map@data$NAME_1 %in% c('Maputo', 'Gaza'),]
+map_fortified <- broom::tidy(map, region = 'NAME_1')
+
+map2 <- moz2
+map2 <- map2[map2@data$NAME_1 %in% c('Maputo', 'Gaza'),]
+map2_fortified <- broom::tidy(map2, region = 'NAME_2')
+
+map2_fortified$district <-
+  ifelse(map2_fortified$id == 'Magude',
+         'Intervention',
+         ifelse(map2_fortified$id %in% c('Moamba',
+                                         'Manhiça',
+                                         'Massingir',
+                                         'Chókwè',
+                                         'Bilene'),
+                'Contiguous',
+                'Control'))
+
+cols <- c('darkorange', 'red', 'darkgrey')
+area_map <-
+  ggplot() +
+  geom_polygon(data = map2_fortified,
+               aes(x = long,
+                   y = lat,
+                   group = group,
+                   fill = district),
+                   alpha = 0.8,
+               color = 'black',
+               size = 0.5) +
+    # geom_label(data = coords@data,
+    #            aes(x = lng,
+    #                y = lat,
+    #                label = district),
+    #            size = 2) +
+  scale_fill_manual(name = '',
+                    values = cols) +
+  theme_publication() +
+  ggthemes::theme_map() +
+  theme(legend.text=element_text(size=8)) +
+  labs(title = 'Figure 1: Intervention, spillover, and control areas')
+print(area_map)
+```
+
+Our analysis consisted of a comparison between the contiguous and control areas both during the period immediately leading up to the intervention (January 1, 2013 through October 10, 2015), as well as the first 1.5 years after the intervention began (October 11, 2015 through March 1, 2017). In a first phase of analysis, we calculate the simple cumulative incidence during both the before and after phases for both locations (contiguous and control). We then assess significance by estimating an ordinary least squares model on the weekly incidence as a function of the interaction between the binary time period and location categories.
+
+Though neither the contiguous nor control districts received MDA, other smaller interventions did take place during the study time. Importantly, both IRS campaigns and ITN (insecticide-treated net) distribution activities occurred in some of the contiguous and control districts, at different times, and with different levels of coverage. Thereafter, we model the effect of these interventions (both in terms of coverage rates and time since intervention), so as to be able to generate a hypothetical "predicted" number of cases in the contiguous districts, had the malaria elimination not occurred. For the generation of counterfactual predicted values, we employ a multivariate binomial probit model which estimates the week-specific district-level malaria incidence, trained only on pre-intervention data. Our initial model took on the following form:
+
+$$
+\begin{equation}
+\operatorname{Pr}(\text{Malaria} = 1 \mid \text{X}) = \beta_{0} + \beta_{1} \text{Location} + \beta_{2} \text{Month} + (\beta_3{ITN}*\beta_4ITN_t) + (\beta_5{IRS}*\beta_6{IRS_t})
+\end{equation}
+$$
+
+(where $_t$ represents time elapsed since commencement of most recent IRS or ITN campaign)
+
+Our model accounts for the fixed effects of location and seasonality, as well as the potential confounding effects of population coverage by ITN, and IRS, and the interaction of those latter effects with the time since their initiation (since both have a "waning" effect). Precipitation and lagged precipitation data were collected and analyzed, but were not included in the model due to lack of granularity (there were only negligible differences between different locations). The time elapsed since the most recent indoor residual spraying (IRS) campaign had taken place in the district, as well as the IRS population coverage were initially included as covariates in the model, but removed after backwards stepwise selection.
+
+All data processing and analysis were carried out in R [@R]. All code is freely available online [@brewgit].
+
+# Results {#results}
+
+
+In the 5 districts which shared a border with the intervention zone, the average weekly incidence of malaria fell from `r pre_avg` to `r post_avg` fom the pre-intervention period (January 1, 2013 through October 10, 2015) to the intervention period (October 20, 2015 through Marcy 1, 2017). During the malaria season (defined here as January through April), when the protective spillover effect from the intervention should be at it's greatest, the fall was from `r pre_avg_season` to `r post_avg_season`.
+
+On the other hand, in the 14 control districts, the average weekly incidence of malaria increased from `r pre_avg_control` during the pre intervention period to `r post_avg_control` during the intervention period. The increase was similar during the the malaria seasons before and during the intervention (`r pre_avg_season_control` and `r post_avg_season_control`, respectively).
+
+
+
+```{r}
+simple_data <- df %>%
+  filter(disease == 'MALARIA') %>%
+  filter(date >= '2013-01-01') %>%
+  filter(location != 'Intervention') %>%
+  mutate(period = ifelse(date <= '2015-10-10',
+                           'Before',
+                           'After'))
+simple_data$location <-
+  factor(simple_data$location,
+         levels = c('Control', 'Contiguous'))
+simple_data$period <- 
+  factor(simple_data$period,
+         levels = c('Before', 'After'))
+simple <- 
+  simple_data %>%
+  group_by(location, 
+           period) %>%
+  summarise(cases = sum(cases),
+            person_weeks = sum(population)) %>%
+  ungroup %>%
+  mutate(avg_weekly_incidence = round(cases / person_weeks * 1000, digits = 2))
+names(simple) <- Hmisc::capitalize(gsub('_', ' ', names(simple)))
+kable(simple)
+```
+
+```{r}
+simple_model <- lm(pk ~ location + period + location*period,
+                   data = simple_data)
+ci <- confint(simple_model)
+
+reduction <- round(coef(simple_model)[names(coef(simple_model)) == 'locationContiguous:periodAfter'], digits = 2)
+reduction_uncertainty <- round(ci[row.names(ci) == 'locationContiguous:periodAfter'], digits = 2)
+
+
+simple_model_season <- lm(pk ~ location + period + location*period,
+                   data = simple_data %>%
+                     filter(month %in% 1:4))
+ci_season <- confint(simple_model_season)
+
+reduction_season <- round(coef(simple_model_season)[names(coef(simple_model_season)) == 'locationContiguous:periodAfter'], digits = 2)
+reduction_uncertainty_season <- round(ci_season[row.names(ci) == 'locationContiguous:periodAfter'], digits = 2)
+```
+
+We estimate the simple spillover effect to be a reduction in the weekly incidence of malaria of `r reduction` cases per 1,000, with a 95% confidence interval of between `r paste0(reduction_uncertainty, collapse = ' and ')`. During the  malaria season, the effect is greater: a reduction of `r reduction_season`, with a 95% confidence interval of between `r paste0(reduction_uncertainty_season, collapse = ' and ')`. 
+
+```{r}
+# Get person weeks of risk for the post period in the contiguous
+ptar <- simple_data %>%
+  filter(period == 'After',
+         location == 'Contiguous') %>%
+  summarise(x = sum(population)) %>%
+  .$x
+
+# Get what WOULD have happened, with control's parameters
+simple_data$predicted <- predict(simple_model,
+                                 simple_data %>%
+                                   mutate(location == 'Control')) + coef(simple_model)[names(coef(simple_model)) == 'locationContiguous']
+
+preds <- predict(simple_model,
+                                 simple_data %>%
+                                   mutate(location == 'Control'),
+                 se.fit = TRUE,
+                 interval = 'confidence')$fit + coef(simple_model)[names(coef(simple_model)) == 'locationContiguous']
+simple_data$lwr <- preds[,2]
+simple_data$upr <- preds[,3]
+
+cases_prevented <- simple_data %>%
+  filter(period == 'After',
+         location == 'Contiguous') %>%
+  summarise(real_cases = sum(cases),
+            predicted_cases = sum(predicted * (population/1000)),
+            predicted_upper = sum(upr * (population/1000)),
+            predicted_lower = sum(lwr * population/1000)) %>%
+  mutate(prevented = predicted_cases - real_cases,
+         prevented_upper = predicted_upper - real_cases,
+         prevented_lower = predicted_lower - real_cases) 
+```
+
+
+The OLS model estimated for the description of the intervention's effects on the contiguous area can also be used as a predictive tool for a hypothetical scenario in which the intervention had not occurred (ie, keeping the fixed effects of the location and period, but manually setting the data on which we predict present as non-contiguous), allowing for the estimation of cases prevented. Doing so shows that the intervention in Magude was associated with an unadjusted positive spillover of `r round(cases_prevented$prevented)` cases prevented during the period from October 10, 2015 through March 1, 2017, with a 95% confidence interval of `r paste0(round(c(cases_prevented$prevented_lower, cases_prevented$prevented_upper), digits = 0), collapse = ' to ')`.
+
+
+
+```{r}
+# Get grouped by location
+by_location <-
+  df %>%
+  filter(disease == 'MALARIA') %>%
+  group_by(date = as.Date(paste0(year, '-', month, '-01')),
+           location) %>%
+  summarise(cases = sum(cases),
+            population = sum(population)) %>%
+  ungroup %>%
+  mutate(incidence = cases / population * 1000)
+
+label_df <- data_frame(x = as.Date('2015-10-01') + c(-180, 180),
+                       y = 13,
+                       label = c('Before', 'After'))
+
+ts <-
+  ggplot(data = by_location %>%
+           filter(date >= '2013-01-01'),
+         aes(x = date,
+             y = incidence)) +
+  geom_line(aes(color = location), 
+            alpha = 0.8) +
+  theme_publication(base_size = 12) +
+  scale_colour_publication(name = '') +
+  geom_vline(xintercept = as.Date('2015-10-01'),
+             alpha = 0.8,
+             lty = 2) + 
+  geom_text(data = label_df,
+             aes(x = x,
+                 y = y,
+                 label = label),
+             size = 6,
+            alpha = 0.6) +
+  labs(x = 'Month',
+       y = 'Incidence per 1,000',
+       title = 'Figure 2: Monthly malaria incidence')
+ts
+```
+
+```{r, fig.height = 6, fig.width = 6}
+# Decline chart
+decline_data <-
+  df %>%
+  filter(disease == 'MALARIA') %>%
+  filter(date >= '2013-01-01') %>%
+  group_by(date = factor(ifelse(date <= '2015-10-01',
+                         'Before', 'After'),
+                         levels = c('Before', 'After')),
+           location) %>%
+  summarise(cases = sum(cases),
+            population = sum(population)) %>%
+  ungroup %>%
+  mutate(incidence = cases / population * 1000) %>%
+  group_by(location) %>%
+  mutate(p = incidence / incidence[date == 'Before'] * 100)
+
+g1 <- ggplot(data = decline_data,
+       aes(x = date,
+           y = incidence,
+           group = location,
+           color = location)) +
+  geom_point(size = 3, 
+             alpha = 0.8) +
+  geom_line(alpha = 0.6,
+            size = 2) +
+  geom_label(aes(y = incidence - 0.3,
+                 label = round(incidence, 2)),
+             show.legend = FALSE) +
+  theme_publication(base_size = 8) +
+  scale_colour_publication(name = '') +
+  labs(x = 'Time',
+       y = 'Average weekly incidence per 1,000',
+       title = 'Before and after incidence estimates') +
+  ylim(0, 7)
+
+
+g2 <- ggplot(data = decline_data,
+       aes(x = date,
+           y = p,
+           group = location,
+           color = location)) +
+  geom_point(size = 3, 
+             alpha = 0.8) +
+  geom_line(alpha = 0.6,
+            size = 1) +
+  geom_label(data = decline_data %>%
+               filter(date != 'Before'),
+             aes(y = p - 8,
+                 label = round(p, 2)),
+             show.legend = FALSE) +
+  theme_publication(base_size = 8) +
+  scale_colour_publication(name = '') +
+  labs(x = 'Time',
+       y = 'Percent of pre-intervention incidence',
+       title = 'Incidence as % of pre-intervention incidence') +
+  ylim(0, 125) +
+  geom_hline(yintercept = 100,
+             lty = 2,
+             alpha = 0.6)
+
+
+grid.arrange(g1, g2, top = textGrob("Figure 3", gp=gpar(fontsize=15, fontface = 2)), ncol = 2)
+
+```
+
+```{r, fig.height = 7, fig.width = 7}
+# Construction of counterfactual
+model_data <- df %>%
+            filter(disease == 'MALARIA',
+                   district != 'MAGUDE') %>%
+  group_by(district, 
+           year, 
+           season = ifelse(month %in% 1:4, 'rainy', 'not-rainy'),
+           date, 
+           month) %>%
+  summarise(location = first(location),
+            cases = sum(cases),
+            population = sum(population),
+            irs_coverage_people = mean(irs_coverage_people),
+            weeks_since_last_irs_campaign_end = mean(weeks_since_last_irs_campaign_end),
+            itn_coverage = mean(itn_coverage)) %>%
+  ungroup %>%
+  mutate(p = cases / population) %>%
+  mutate(pk = cases / population * 1000) %>%
+  filter(date >= '2013-01-01')
+
+probit = FALSE
+if(probit){
+  fit <- glm(p ~ 
+             factor(month) +
+             year*location +
+            # factor(month) +
+             # district +
+             itn_coverage +
+             # irs_coverage_people +
+             # (irs_coverage_people*weeks_since_last_irs_campaign_end) +
+            location,
+             # year + season*year  + 
+            # season +
+            # irs_coverage_people*weeks_since_last_irs_campaign_end + 
+           family = binomial(link = 'probit'),
+          data = model_data %>%
+            filter(date < '2015-10-01'))
+
+  # model_data$predicted <- predict(fit, model_data) * model_data$population
+  model_data[, c("predicted", "se")] <- predict(fit, model_data, type = "response", se.fit = TRUE)[-3] 
+  model_data$predicted <- model_data$predicted * model_data$population
+  model_data$se <-model_data$se   * model_data$population
+} else {
+  fit <- lm(p ~ 
+             factor(month) +
+             year*location +
+            # factor(month) +
+             # district +
+             itn_coverage +
+             # irs_coverage_people +
+             # (irs_coverage_people*weeks_since_last_irs_campaign_end) +
+            location,
+             # year + season*year  + 
+            # season +
+            # irs_coverage_people*weeks_since_last_irs_campaign_end + 
+          data = model_data %>%
+            filter(date < '2015-10-01'))
+
+  # model_data$predicted <- predict(fit, model_data) * model_data$population
+  model_data[, c("predicted")] <- predict(fit, model_data)
+  model_data$predicted <- model_data$predicted * model_data$population
+  
+}
+
+
+plot_data <-
+  model_data %>%
+  group_by(#date = as.Date(paste0(year, '-', month, '-01')), 
+    date = lendable::date_truncate(date, 'quarter'),
+           location) %>%
+  summarise(cases = mean(cases),
+            predicted_cases = mean(predicted),
+            population = mean(population)) %>%
+  ungroup %>%
+  mutate(pk = cases / population * 1000) %>%
+  mutate(predicted = predicted_cases / population * 1000) %>%
+  dplyr::select(date, location, pk, predicted) %>%
+  rename(observed = pk) %>%
+  mutate(prediction_error = observed - predicted) %>%
+  gather(key = key, value = value, observed:prediction_error)
+
+cols <- c('red', 'black')
+observed_vs_predicted <- ggplot(data = plot_data %>%
+               filter(key != 'prediction_error') %>%
+               mutate(key = Hmisc::capitalize(key)),
+       aes(x = date,
+           y = value,
+           color = key)) +
+  geom_line() +
+  facet_wrap(~location) +
+  theme_publication(base_size = 8) +
+  scale_color_manual(name = '',
+                     values = cols) +
+  labs(x = 'Date',
+       y = 'Weekly incidence per 1,000',
+       title = 'Observed vs predicted') +
+  geom_vline(xintercept = as.Date('2015-10-01'),
+             alpha = 0.8,
+             lty = 2)
+
+prediction_error <- ggplot(data = plot_data %>%
+               filter(key == 'prediction_error') %>%
+               mutate(key = 'Prediction error'),
+       aes(x = date,
+           y = value,
+           color = key)) +
+  geom_line() +
+  facet_wrap(~location) +
+    facet_wrap(~location) +
+  theme_publication(base_size = 8) +
+  scale_color_manual(name = '',
+                     values = cols) +
+  labs(x = 'Date',
+       y = 'Weekly incidence per 1,000',
+       title = 'Difference between observed and predicted') +
+  geom_hline(yintercept = 0,
+             alpha = 0.7,
+             lty = 2) +
+  geom_vline(xintercept = as.Date('2015-10-01'),
+             alpha = 0.8,
+             lty = 2) 
+
+grid.arrange(observed_vs_predicted,
+             prediction_error,
+             top = textGrob("Figure 4: Model-adjusted spillover effect", gp=gpar(fontsize=15, fontface = 2)))
+```
+
+```{r}
+# Breakdown of each contiguous district
+x <- 
+  df %>%
+  filter(location == 'Contiguous') %>%
+  group_by(date = as.Date(paste0(year, '-', month, '-01')), district) %>%
+  summarise(cases = sum(cases),
+            population = sum(population)) %>%
+  ungroup %>%
+  mutate(pk = cases / population * 1000) %>%
+  filter(date >= '2013-01-01')
+y <- 
+  df %>%
+  filter(location == 'Control') %>%
+  group_by(date = as.Date(paste0(year, '-', month, '-01')), district) %>%
+  summarise(cases = sum(cases),
+            population = sum(population)) %>%
+  ungroup %>%
+  mutate(pk = cases / population * 1000) %>%
+  filter(date >= '2013-01-01')
+ggplot() +
+  geom_line(data = y,
+       aes(x = date,
+           y = pk,
+           group = district),
+       color = 'black',
+       alpha = 0.3) +
+  geom_line(data = x,
+       aes(x = date,
+           y = pk,
+           color = district),
+       alpha = 0.7,
+       size = 2) +
+  theme_publication() +
+  scale_y_log10() +
+  labs(x = 'Date',
+       y = 'Incidence per 1,000 (log-scale)',
+       title = 'Figure 5: Contiguous vs. control districts') +
+  geom_vline(xintercept = as.Date('2015-10-01'),
+             alpha = 0.8,
+             lty = 2) +
+  scale_color_manual(name = '',
+                     values = colorRampPalette(c('yellow', 
+                                                 'darkorange', 
+                                                 'darkred'))(5))
+```
+
+
+# Discussion
+
+Some text goes here.
+
+
+
+```{r include=FALSE}
+# automatically create a bib database for R packages
+knitr::write_bib(c(
+  .packages(), 'bookdown', 'knitr', 'rmarkdown'
+), 'packages.bib')
+```
+
+
+# References
