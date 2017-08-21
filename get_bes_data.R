@@ -182,10 +182,10 @@ for(i in 1:length(sm_files)){
                                1,
                                0))
     
-    # Rename columns to get in the same format as mb data
+    # dplyr::rename columns to get in the same format as mb data
     these_data <-
       these_data %>%
-      rename(year = Ano,
+      dplyr::rename(year = Ano,
              week = Semana,
              district = Distrito,
              province = Provincia,
@@ -237,7 +237,7 @@ for(i in 1:length(sm_files)){
     if(this_file == "SIS-MA_2016-17.xls"){
       these_data <-
         these_data %>%
-        rename(Period = Semana,
+        dplyr::rename(Period = Semana,
                `Organisation unit` = `DISTRITO DE XAI-XAI`)
     }
     
@@ -245,10 +245,10 @@ for(i in 1:length(sm_files)){
     these_data$year <- as.numeric(substr(these_data$Period, 1, 4))
     these_data$week <- as.numeric(substr(these_data$Period, 6, nchar(these_data$Period)))
     
-    # Rename columns to get in the same format as mb data
+    # dplyr::rename columns to get in the same format as mb data
     these_data <-
       these_data %>%
-      rename(district = `Organisation unit`,
+      dplyr::rename(district = `Organisation unit`,
              `0-4` = `BES - MALÁRIA 0-4 anos, CASOS`,
              `5+` = `BES - MALÁRIA 5+ anos, CASOS`) 
     
@@ -379,9 +379,9 @@ bes17 <-
 bes17$year <- as.numeric(substr(bes17$Semana, 1, 4))
 bes17$week <- as.numeric(substr(bes17$Semana, 6, nchar(bes17$Semana)))
 
-# Rename some columns
+# dplyr::rename some columns
 bes17 <- bes17 %>%
-  rename(`0-4` = `BES - MALÁRIA 0-4 anos, CASOS`,
+  dplyr::rename(`0-4` = `BES - MALÁRIA 0-4 anos, CASOS`,
          `5+` = `BES - MALÁRIA 5+ anos, CASOS`,
          district = Distrito) %>%
 # Remove unecessary columns

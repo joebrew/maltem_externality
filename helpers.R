@@ -11,13 +11,13 @@ create_date_helper <-
     date_helper$dow <- weekdays(date_helper$date)
     date_helper <-
       date_helper %>%
-      mutate(year = as.numeric(format(date, '%Y')),
+      dplyr::mutate(year = as.numeric(format(date, '%Y')),
              week = as.numeric(format(date, '%U')))
     
     date_helper <- date_helper %>%
       group_by(year, week) %>%
-      mutate(has_saturday = 'Saturday' %in% dow) %>%
-      filter(has_saturday) %>%
+      dplyr::mutate(has_saturday = 'Saturday' %in% dow) %>%
+      dplyr::filter(has_saturday) %>%
       ungroup %>%
       dplyr::select(-has_saturday)
     
@@ -34,7 +34,7 @@ create_date_helper <-
     date_helper <-
       date_helper %>%
       dplyr::select(new_date, year, week) %>%
-      rename(date = new_date)
+      dplyr::rename(date = new_date)
     date_helper <- date_helper[!duplicated(date_helper$date),]
     
     # Add 1 to all week numbers so as to get weeks 1-52, rather than
@@ -119,3 +119,19 @@ get_weather_for_location <- function(noaa,
               prcp = weighted.mean(prcp, w = weight, na.rm = TRUE))
   return(out)
 }
+
+# Function for tabeling
+kablify <- function(x, size = 10, caption =''){
+  require(knitr)
+  require(kableExtra)
+  kable(x, format = "html", caption = caption) %>% 
+    kable_styling(#bootstrap_options = c("striped",
+      # "hover",
+      # "condensed"),
+      font_size = size,
+      bootstrap_options = "striped",
+      # position = 'float_left',
+      # latex_options = c("striped", "hold_position"),
+      full_width = F)
+}
+

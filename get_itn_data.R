@@ -6,7 +6,7 @@ itn <- itn[,!is.na(names(itn))]
 # Clean up names
 itn <-
   itn %>%
-  rename(nets = ITN_distributed) %>%
+  dplyr::rename(nets = ITN_distributed) %>%
   dplyr::select(province,
                 district, 
                 year,

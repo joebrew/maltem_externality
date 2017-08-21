@@ -1,0 +1,8 @@
+*.RData
+data/
+misc_data/
+noaa_data/
+paper/figures
+*.html
+public_data/
+reports

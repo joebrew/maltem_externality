@@ -1,5 +1,28 @@
 # Libraries
+library(readxl)
+library(sp)
+# library(memisc)
+library(memisc)
 library(tidyverse)
+library(dplyr)
+library(readr)
+library(scales)
+library(grid)
+library(gridExtra)
+library(ggthemes)
+require(knitr)
+require(kableExtra)
+library(caret)
+library(glmnet)
+library(randomForest)
+library(kernlab)
+library(pROC)
+library(Metrics)
+library(doParallel)
+library(nnet)
+library(dplyr)
+
+
 
 # BES data
 source('get_bes_data.R', encoding = "UTF-8")
@@ -22,7 +45,7 @@ itn <-
             y = pop %>%
               group_by(year, district, province) %>%
               summarise(population = sum(population, na.rm = TRUE)) %>%
-                          ungroup,
+              ungroup,
             by = c('province', 'district', 'year'))
 
 # Get percentage coverage of itn
@@ -198,3 +221,4 @@ df_agg <- df %>%
 #        y = 'Protection score',
 #        title = 'IRS protection by district') +
 #   ggthemes::theme_hc()
+
