@@ -5,7 +5,7 @@ params:
   something_else: 2
 fig_height: 2.6
 fig_width: 4
-bibliography: bibliography.bib, packages.bib
+bibliography: bibliography.bib
 csl: elsevier-harvard.csl
 output:
   html_document:
